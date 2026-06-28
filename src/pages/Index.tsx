@@ -91,8 +91,9 @@ export default function Index() {
   const [balance, setBalance] = useState(2450);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
+  const [owned, setOwned] = useState<Item[]>([]);
+  const [profileTab, setProfileTab] = useState<'edit' | 'collection'>('edit');
   const [profile, setProfile] = useState<Profile>(null);
-  // profile edit state
   const [editNick, setEditNick] = useState('');
   const [editAvatar, setEditAvatar] = useState('default');
   const [nickError, setNickError] = useState('');
@@ -123,6 +124,10 @@ export default function Index() {
       return;
     }
     setBalance((b) => b - cartTotal);
+    setOwned((prev) => {
+      const newItems = cart.map((l) => l.item).filter((i) => !prev.some((o) => o.name === i.name));
+      return [...prev, ...newItems];
+    });
     toast({ title: 'Покупка успешна! 🎉', description: `Куплено товаров: ${cartCount}. Списано ${cartTotal} 💠.` });
     setCart([]);
     setCartOpen(false);
@@ -351,7 +356,76 @@ export default function Index() {
       ) : (
         /* ── PROFILE PAGE ── */
         <section className="container py-10 pb-20 animate-fade-in">
-          <h2 className="font-display text-3xl md:text-4xl font-bold mb-8">МОЙ ПРОФИЛЬ</h2>
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+            <h2 className="font-display text-3xl md:text-4xl font-bold">МОЙ ПРОФИЛЬ</h2>
+            <div className="flex gap-2 p-1 rounded-xl bg-secondary border border-white/5">
+              {(['edit', 'collection'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setProfileTab(t)}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
+                    profileTab === t ? 'bg-cyan-400 text-background' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Icon name={t === 'edit' ? 'UserCog' : 'Package'} size={15} />
+                  {t === 'edit' ? 'Настройки' : `Коллекция ${owned.length > 0 ? `(${owned.length})` : ''}`}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {profileTab === 'collection' ? (
+            <div>
+              {owned.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-24 text-muted-foreground gap-4">
+                  <Icon name="PackageOpen" size={56} className="opacity-30" />
+                  <p className="text-lg font-display">Коллекция пуста</p>
+                  <p className="text-sm">Купи косметику или титулы в магазине — они появятся здесь</p>
+                  <Button onClick={() => setActive('shop')} className="mt-2 bg-cyan-400 text-background font-display font-semibold hover:opacity-90">
+                    <Icon name="ShoppingBag" size={16} /> Перейти в магазин
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {(['Титул', 'Косметика'] as const).map((type) => {
+                    const group = owned.filter((i) => i.type === type);
+                    if (!group.length) return null;
+                    return (
+                      <div key={type} className="mb-10">
+                        <h3 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
+                          <Icon name={type === 'Титул' ? 'Crown' : 'Sparkles'} size={18} className="text-cyan-300" />
+                          {type === 'Титул' ? 'Титулы' : 'Косметика'}
+                          <span className="text-muted-foreground text-sm font-normal">({group.length})</span>
+                        </h3>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                          {group.map((item) => {
+                            const r = RARITY[item.rarity];
+                            return (
+                              <div key={item.name} className={`rounded-2xl border bg-card/60 backdrop-blur p-4 flex flex-col items-center text-center gap-3 ${r.color}`}>
+                                <div className={`w-14 h-14 rounded-xl bg-gradient-to-br from-secondary to-background flex items-center justify-center border ${r.color}`}>
+                                  {item.emoji
+                                    ? <span className="text-3xl leading-none">{item.emoji}</span>
+                                    : <Icon name={item.icon} size={28} />
+                                  }
+                                </div>
+                                <div>
+                                  <p className="font-display font-semibold text-sm leading-tight">{item.name}</p>
+                                  <p className={`text-[10px] font-bold uppercase tracking-wider mt-1 ${r.color}`}>{item.rarity}</p>
+                                </div>
+                                <div className="mt-auto w-full px-2 py-1 rounded-lg bg-cyan-400/10 border border-cyan-400/20 text-cyan-300 text-[10px] font-semibold flex items-center justify-center gap-1">
+                                  <Icon name="Check" size={11} /> В коллекции
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+          ) : (
 
           <div className="grid md:grid-cols-3 gap-8">
             {/* Left — form */}
@@ -474,6 +548,7 @@ export default function Index() {
               )}
             </div>
           </div>
+          )}
         </section>
       )}
 
