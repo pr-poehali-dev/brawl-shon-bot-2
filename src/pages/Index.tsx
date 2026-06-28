@@ -2,8 +2,17 @@ import { useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 
 const HERO_IMG = 'https://cdn.poehali.dev/projects/e286d4e4-31d5-488b-95e2-ef4a099f9aba/files/115b72cd-fb1d-498c-aa2e-238bf8e3b2a9.jpg';
+
+const AVATARS = [
+  { id: 'default', src: '', label: 'Без аватарки' },
+  { id: 'warrior', src: 'https://cdn.poehali.dev/projects/e286d4e4-31d5-488b-95e2-ef4a099f9aba/files/ee20e869-f49a-4919-8f6e-2583ff0e80f2.jpg', label: 'Киберволин' },
+  { id: 'girl', src: 'https://cdn.poehali.dev/projects/e286d4e4-31d5-488b-95e2-ef4a099f9aba/files/f4462ceb-32cd-4d77-a58c-0237321d6a8d.jpg', label: 'Нова' },
+  { id: 'robot', src: 'https://cdn.poehali.dev/projects/e286d4e4-31d5-488b-95e2-ef4a099f9aba/files/04ac53ed-4992-4eab-af13-88d586f621d3.jpg', label: 'Протокол' },
+  { id: 'ninja', src: 'https://cdn.poehali.dev/projects/e286d4e4-31d5-488b-95e2-ef4a099f9aba/files/a04720ec-ac00-4c01-bef9-8edfc8944664.jpg', label: 'Тень' },
+];
 
 const NAV = [
   { id: 'home', label: 'Главная', icon: 'Home' },
@@ -24,9 +33,9 @@ type Item = {
 
 const RARITY: Record<Item['rarity'], { color: string; glow: string }> = {
   'Обычный': { color: 'text-slate-300 border-slate-500/40', glow: '' },
-  'Редкий': { color: 'text-cyan-300 border-cyan-400/50', glow: 'group-hover:glow-cyan' },
-  'Эпический': { color: 'text-fuchsia-300 border-fuchsia-400/50', glow: 'group-hover:glow-magenta' },
-  'Легендарный': { color: 'text-amber-300 border-amber-400/50', glow: 'group-hover:shadow-[0_0_30px_-5px_rgba(245,158,11,0.6)]' },
+  'Редкий': { color: 'text-cyan-300 border-cyan-400/50', glow: '' },
+  'Эпический': { color: 'text-fuchsia-300 border-fuchsia-400/50', glow: '' },
+  'Легендарный': { color: 'text-amber-300 border-amber-400/50', glow: '' },
 };
 
 const ITEMS: Item[] = [
@@ -41,17 +50,37 @@ const ITEMS: Item[] = [
 ];
 
 const Clover = ({ className = '' }: { className?: string }) => (
-  <span className={`inline-flex items-center text-cyan-300 ${className}`}>💠</span>
+  <span className={`inline-flex items-center ${className}`}>💠</span>
 );
 
 type CartLine = { item: Item; qty: number };
+type Profile = { nick: string; avatarId: string } | null;
 
-function Index() {
+function AvatarDisplay({ avatarId, size = 'md' }: { avatarId: string; size?: 'sm' | 'md' | 'lg' }) {
+  const avatar = AVATARS.find((a) => a.id === avatarId);
+  const sz = size === 'sm' ? 'w-9 h-9' : size === 'lg' ? 'w-24 h-24' : 'w-12 h-12';
+  const iconSz = size === 'sm' ? 18 : size === 'lg' ? 40 : 22;
+  if (!avatar || !avatar.src) {
+    return (
+      <div className={`${sz} rounded-full bg-gradient-to-br from-cyan-400 to-fuchsia-500 flex items-center justify-center shrink-0`}>
+        <Icon name="User" size={iconSz} className="text-background" />
+      </div>
+    );
+  }
+  return <img src={avatar.src} alt={avatar.label} className={`${sz} rounded-full object-cover border-2 border-cyan-400/40 shrink-0`} />;
+}
+
+export default function Index() {
   const [active, setActive] = useState('home');
   const [filter, setFilter] = useState<'all' | 'Косметика' | 'Титул'>('all');
   const [balance, setBalance] = useState(2450);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
+  const [profile, setProfile] = useState<Profile>(null);
+  // profile edit state
+  const [editNick, setEditNick] = useState('');
+  const [editAvatar, setEditAvatar] = useState('default');
+  const [nickError, setNickError] = useState('');
   const { toast } = useToast();
 
   const visible = ITEMS.filter((i) => filter === 'all' || i.type === filter);
@@ -69,9 +98,7 @@ function Index() {
 
   const changeQty = (name: string, delta: number) => {
     setCart((prev) =>
-      prev
-        .map((l) => (l.item.name === name ? { ...l, qty: l.qty + delta } : l))
-        .filter((l) => l.qty > 0)
+      prev.map((l) => (l.item.name === name ? { ...l, qty: l.qty + delta } : l)).filter((l) => l.qty > 0)
     );
   };
 
@@ -86,8 +113,39 @@ function Index() {
     setCartOpen(false);
   };
 
+  const createProfile = () => {
+    const nick = editNick.trim();
+    if (nick.length < 3) { setNickError('Минимум 3 символа'); return; }
+    if (nick.length > 20) { setNickError('Максимум 20 символов'); return; }
+    setNickError('');
+    setProfile({ nick, avatarId: editAvatar });
+    setBalance((b) => b + 100);
+    toast({ title: 'Профиль создан! 🎉', description: 'Тебе начислено +100 💠 за регистрацию!' });
+  };
+
+  const saveProfile = () => {
+    const nick = editNick.trim();
+    if (nick.length < 3) { setNickError('Минимум 3 символа'); return; }
+    if (nick.length > 20) { setNickError('Максимум 20 символов'); return; }
+    setNickError('');
+    setProfile({ nick, avatarId: editAvatar });
+    toast({ title: 'Профиль обновлён!' });
+  };
+
+  const startEdit = () => {
+    if (profile) { setEditNick(profile.nick); setEditAvatar(profile.avatarId); }
+    else { setEditNick(''); setEditAvatar('default'); }
+  };
+
+  const navigateTo = (id: string) => {
+    setActive(id);
+    if (id === 'profile') startEdit();
+  };
+
   return (
     <div className="min-h-screen grid-bg text-foreground font-body overflow-x-hidden">
+      <Toaster />
+
       {/* Ambient glows */}
       <div className="pointer-events-none fixed -top-40 -left-40 w-[500px] h-[500px] rounded-full bg-cyan-500/20 blur-[120px]" />
       <div className="pointer-events-none fixed top-1/3 -right-40 w-[500px] h-[500px] rounded-full bg-fuchsia-500/20 blur-[120px]" />
@@ -96,7 +154,7 @@ function Index() {
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/70 border-b border-white/5">
         <div className="container flex items-center justify-between h-16">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-400 to-fuchsia-500 flex items-center justify-center font-display font-bold text-background text-lg glow-cyan">B</div>
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-400 to-fuchsia-500 flex items-center justify-center font-display font-bold text-background text-lg">B</div>
             <span className="font-display text-xl font-bold tracking-wide">
               BRAWL <span className="text-gradient">SHON</span>
             </span>
@@ -106,7 +164,7 @@ function Index() {
             {NAV.map((n) => (
               <button
                 key={n.id}
-                onClick={() => setActive(n.id)}
+                onClick={() => navigateTo(n.id)}
                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
                   active === n.id ? 'text-cyan-300 bg-cyan-400/10' : 'text-muted-foreground hover:text-foreground'
                 }`}
@@ -127,132 +185,279 @@ function Index() {
             >
               <Icon name="ShoppingCart" size={18} className="text-cyan-300" />
               {cartCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-fuchsia-500 text-white text-[10px] font-bold flex items-center justify-center animate-scale-in">
+                <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-fuchsia-500 text-white text-[10px] font-bold flex items-center justify-center">
                   {cartCount}
                 </span>
               )}
             </button>
-            <button className="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-400 to-fuchsia-500 flex items-center justify-center">
-              <Icon name="User" size={18} className="text-background" />
+            <button onClick={() => navigateTo('profile')}>
+              <AvatarDisplay avatarId={profile?.avatarId ?? 'default'} size="sm" />
             </button>
           </div>
         </div>
+
+        {/* Mobile nav */}
+        <nav className="flex md:hidden border-t border-white/5">
+          {NAV.map((n) => (
+            <button
+              key={n.id}
+              onClick={() => navigateTo(n.id)}
+              className={`flex-1 py-2 flex flex-col items-center gap-0.5 text-[10px] font-medium transition-colors ${
+                active === n.id ? 'text-cyan-300' : 'text-muted-foreground'
+              }`}
+            >
+              <Icon name={n.icon} size={18} />
+              {n.label}
+            </button>
+          ))}
+        </nav>
       </header>
 
-      {/* Hero */}
-      <section className="relative container py-12 md:py-20">
-        <div className="grid md:grid-cols-2 gap-10 items-center">
-          <div className="animate-fade-in">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-fuchsia-500/10 border border-fuchsia-400/30 text-fuchsia-300 text-xs font-semibold mb-5">
-              <Icon name="Zap" size={14} /> Сезон 1 · Открыт магазин
-            </div>
-            <h1 className="font-display text-5xl md:text-7xl font-bold leading-[0.95] mb-5">
-              ПРОКАЧАЙ<br />СВОЙ <span className="shimmer-text animate-shimmer">СТИЛЬ</span>
-            </h1>
-            <p className="text-muted-foreground text-lg max-w-md mb-8">
-              Покупай эксклюзивную косметику и легендарные титулы за клеверы <Clover />. Стань легендой арены Brawl Shon.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Button size="lg" className="bg-gradient-to-r from-cyan-400 to-cyan-500 text-background font-display font-semibold hover:opacity-90 glow-cyan">
-                <Icon name="ShoppingBag" size={18} /> В магазин
-              </Button>
-              <Button size="lg" variant="outline" className="border-fuchsia-400/40 text-fuchsia-200 hover:bg-fuchsia-500/10 font-display font-semibold">
-                <Icon name="Gift" size={18} /> Получить бонус
-              </Button>
-            </div>
-          </div>
-
-          <div className="relative animate-float">
-            <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/30 to-fuchsia-500/30 blur-3xl rounded-full" />
-            <img src={HERO_IMG} alt="Brawl Shon Arena" className="relative rounded-2xl border border-white/10 shadow-2xl" />
-          </div>
-        </div>
-      </section>
-
-      {/* Personal offer */}
-      <section className="container mb-14">
-        <div className="relative overflow-hidden rounded-2xl border border-fuchsia-400/30 bg-gradient-to-r from-fuchsia-500/15 via-secondary to-cyan-500/15 p-6 md:p-8 animate-fade-in">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-fuchsia-500/20 blur-3xl rounded-full" />
-          <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <div className="inline-flex items-center gap-1.5 text-fuchsia-300 text-xs font-bold uppercase tracking-wider mb-2">
-                <Icon name="BadgePercent" size={14} /> Персональная скидка
-              </div>
-              <h3 className="font-display text-2xl md:text-3xl font-bold mb-1">Только для тебя — <span className="text-gradient">−40%</span> на легендарки</h3>
-              <p className="text-muted-foreground text-sm">Спецпредложение активно ещё <span className="text-cyan-300 font-semibold">23:59:04</span></p>
-            </div>
-            <Button size="lg" className="bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-display font-semibold glow-magenta shrink-0">
-              Забрать оффер <Icon name="ArrowRight" size={18} />
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Shop */}
-      <section className="container pb-20">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-7">
-          <h2 className="font-display text-3xl md:text-4xl font-bold">МАГАЗИН</h2>
-          <div className="flex gap-2 p-1 rounded-xl bg-secondary border border-white/5">
-            {(['all', 'Косметика', 'Титул'] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  filter === f ? 'bg-cyan-400 text-background' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {f === 'all' ? 'Всё' : f}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
-          {visible.map((item, idx) => {
-            const r = RARITY[item.rarity];
-            return (
-              <div
-                key={item.name}
-                className={`group relative rounded-2xl border bg-card/60 backdrop-blur p-5 transition-all duration-300 hover:-translate-y-1 ${r.color} ${r.glow} animate-fade-in`}
-                style={{ animationDelay: `${idx * 60}ms` }}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${r.color}`}>
-                    {item.rarity}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">{item.type}</span>
+      {/* ── MAIN CONTENT ── */}
+      {active !== 'profile' ? (
+        <>
+          {/* Hero */}
+          <section className="relative container py-12 md:py-20">
+            <div className="grid md:grid-cols-2 gap-10 items-center">
+              <div className="animate-fade-in">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-fuchsia-500/10 border border-fuchsia-400/30 text-fuchsia-300 text-xs font-semibold mb-5">
+                  <Icon name="Zap" size={14} /> Сезон 1 · Открыт магазин
                 </div>
-
-                <div className="flex items-center justify-center h-28 mb-4">
-                  <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br from-secondary to-background flex items-center justify-center border ${r.color} transition-transform group-hover:scale-110`}>
-                    <Icon name={item.icon} size={36} className="opacity-90" />
-                  </div>
-                </div>
-
-                <h3 className="font-display font-semibold text-base mb-3 leading-tight">{item.name}</h3>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col">
-                    {item.oldPrice && (
-                      <span className="text-xs text-muted-foreground line-through">{item.oldPrice} 💠</span>
-                    )}
-                    <span className="font-display font-bold text-cyan-300 flex items-center gap-1">
-                      {item.price} <Clover />
-                    </span>
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={() => addToCart(item)}
-                    className="bg-cyan-400/10 hover:bg-cyan-400 hover:text-background text-cyan-300 border border-cyan-400/30 font-semibold transition-all"
-                  >
-                    <Icon name="Plus" size={16} />
+                <h1 className="font-display text-5xl md:text-7xl font-bold leading-[0.95] mb-5">
+                  ПРОКАЧАЙ<br />СВОЙ <span className="shimmer-text animate-shimmer">СТИЛЬ</span>
+                </h1>
+                <p className="text-muted-foreground text-lg max-w-md mb-8">
+                  Покупай эксклюзивную косметику и легендарные титулы за клеверы <Clover />. Стань легендой арены Brawl Shon.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <Button onClick={() => navigateTo('shop')} size="lg" className="bg-gradient-to-r from-cyan-400 to-cyan-500 text-background font-display font-semibold hover:opacity-90">
+                    <Icon name="ShoppingBag" size={18} /> В магазин
+                  </Button>
+                  <Button onClick={() => navigateTo('profile')} size="lg" variant="outline" className="border-fuchsia-400/40 text-fuchsia-200 hover:bg-fuchsia-500/10 font-display font-semibold">
+                    <Icon name="UserPlus" size={18} /> {profile ? 'Мой профиль' : 'Создать профиль'}
                   </Button>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </section>
+              <div className="relative animate-float">
+                <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/30 to-fuchsia-500/30 blur-3xl rounded-full" />
+                <img src={HERO_IMG} alt="Brawl Shon Arena" className="relative rounded-2xl border border-white/10 shadow-2xl" />
+              </div>
+            </div>
+          </section>
+
+          {/* Personal offer */}
+          <section className="container mb-14">
+            <div className="relative overflow-hidden rounded-2xl border border-fuchsia-400/30 bg-gradient-to-r from-fuchsia-500/15 via-secondary to-cyan-500/15 p-6 md:p-8 animate-fade-in">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-fuchsia-500/20 blur-3xl rounded-full" />
+              <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 text-fuchsia-300 text-xs font-bold uppercase tracking-wider mb-2">
+                    <Icon name="BadgePercent" size={14} /> Персональная скидка
+                  </div>
+                  <h3 className="font-display text-2xl md:text-3xl font-bold mb-1">Только для тебя — <span className="text-gradient">−40%</span> на легендарки</h3>
+                  <p className="text-muted-foreground text-sm">Спецпредложение активно ещё <span className="text-cyan-300 font-semibold">23:59:04</span></p>
+                </div>
+                <Button size="lg" className="bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-display font-semibold shrink-0">
+                  Забрать оффер <Icon name="ArrowRight" size={18} />
+                </Button>
+              </div>
+            </div>
+          </section>
+
+          {/* Shop */}
+          <section className="container pb-20">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-7">
+              <h2 className="font-display text-3xl md:text-4xl font-bold">МАГАЗИН</h2>
+              <div className="flex gap-2 p-1 rounded-xl bg-secondary border border-white/5">
+                {(['all', 'Косметика', 'Титул'] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      filter === f ? 'bg-cyan-400 text-background' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {f === 'all' ? 'Всё' : f}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+              {visible.map((item, idx) => {
+                const r = RARITY[item.rarity];
+                return (
+                  <div
+                    key={item.name}
+                    className={`group relative rounded-2xl border bg-card/60 backdrop-blur p-5 transition-all duration-300 hover:-translate-y-1 ${r.color} animate-fade-in`}
+                    style={{ animationDelay: `${idx * 60}ms` }}
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${r.color}`}>
+                        {item.rarity}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">{item.type}</span>
+                    </div>
+
+                    <div className="flex items-center justify-center h-28 mb-4">
+                      <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br from-secondary to-background flex items-center justify-center border ${r.color} transition-transform group-hover:scale-110`}>
+                        <Icon name={item.icon} size={36} className="opacity-90" />
+                      </div>
+                    </div>
+
+                    <h3 className="font-display font-semibold text-base mb-3 leading-tight">{item.name}</h3>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        {item.oldPrice && (
+                          <span className="text-xs text-muted-foreground line-through">{item.oldPrice} 💠</span>
+                        )}
+                        <span className="font-display font-bold text-cyan-300 flex items-center gap-1">
+                          {item.price} <Clover />
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => addToCart(item)}
+                        className="bg-cyan-400/10 hover:bg-cyan-400 hover:text-background text-cyan-300 border border-cyan-400/30 font-semibold transition-all"
+                      >
+                        <Icon name="Plus" size={16} />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        </>
+      ) : (
+        /* ── PROFILE PAGE ── */
+        <section className="container py-10 pb-20 animate-fade-in">
+          <h2 className="font-display text-3xl md:text-4xl font-bold mb-8">МОЙ ПРОФИЛЬ</h2>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Left — form */}
+            <div className="md:col-span-2 space-y-6">
+              {/* Avatar picker */}
+              <div className="rounded-2xl border border-white/5 bg-card/60 backdrop-blur p-6">
+                <p className="font-display font-semibold text-sm text-muted-foreground uppercase tracking-wider mb-4">Выбери аватарку</p>
+                <div className="flex flex-wrap gap-4">
+                  {AVATARS.map((av) => (
+                    <button
+                      key={av.id}
+                      onClick={() => setEditAvatar(av.id)}
+                      className={`relative rounded-2xl overflow-hidden transition-all ${
+                        editAvatar === av.id ? 'ring-2 ring-cyan-400 scale-105' : 'opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      {av.src ? (
+                        <img src={av.src} alt={av.label} className="w-20 h-20 object-cover" />
+                      ) : (
+                        <div className="w-20 h-20 bg-gradient-to-br from-secondary to-background flex items-center justify-center">
+                          <Icon name="User" size={32} className="text-muted-foreground" />
+                        </div>
+                      )}
+                      {editAvatar === av.id && (
+                        <div className="absolute inset-0 bg-cyan-400/10 flex items-end justify-center pb-1">
+                          <Icon name="Check" size={16} className="text-cyan-300" />
+                        </div>
+                      )}
+                      <p className="text-[10px] text-center text-muted-foreground mt-1 px-1 truncate w-20">{av.label}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Nick input */}
+              <div className="rounded-2xl border border-white/5 bg-card/60 backdrop-blur p-6">
+                <label className="font-display font-semibold text-sm text-muted-foreground uppercase tracking-wider mb-3 block">
+                  Никнейм
+                </label>
+                <input
+                  type="text"
+                  value={editNick}
+                  onChange={(e) => { setEditNick(e.target.value); setNickError(''); }}
+                  placeholder="Введи свой ник..."
+                  maxLength={20}
+                  className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 font-display text-lg placeholder:text-muted-foreground focus:outline-none focus:border-cyan-400/60 transition-colors"
+                />
+                {nickError && <p className="text-red-400 text-sm mt-2 flex items-center gap-1"><Icon name="AlertCircle" size={14} />{nickError}</p>}
+                <p className="text-muted-foreground text-xs mt-2">{editNick.length}/20 символов · минимум 3</p>
+              </div>
+
+              <Button
+                size="lg"
+                onClick={profile ? saveProfile : createProfile}
+                className="w-full bg-gradient-to-r from-cyan-400 to-cyan-500 text-background font-display font-semibold hover:opacity-90 text-lg h-14"
+              >
+                {profile ? (
+                  <><Icon name="Save" size={20} /> Сохранить изменения</>
+                ) : (
+                  <><Icon name="UserPlus" size={20} /> Создать профиль +100 💠</>
+                )}
+              </Button>
+            </div>
+
+            {/* Right — preview + balance */}
+            <div className="space-y-4">
+              {/* Profile card preview */}
+              <div className="rounded-2xl border border-white/5 bg-card/60 backdrop-blur p-6 flex flex-col items-center text-center">
+                <p className="font-display text-xs text-muted-foreground uppercase tracking-wider mb-4">Предпросмотр</p>
+                <div className="relative mb-4">
+                  <AvatarDisplay avatarId={editAvatar} size="lg" />
+                  {editAvatar !== 'default' && (
+                    <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-cyan-400 flex items-center justify-center">
+                      <Icon name="Check" size={12} className="text-background" />
+                    </div>
+                  )}
+                </div>
+                <p className="font-display font-bold text-xl mb-1">
+                  {editNick.trim() || <span className="text-muted-foreground italic">Твой ник</span>}
+                </p>
+                <p className="text-muted-foreground text-sm">Игрок Brawl Shon</p>
+              </div>
+
+              {/* Balance card */}
+              <div className="rounded-2xl border border-cyan-400/20 bg-gradient-to-br from-cyan-500/10 to-card/60 backdrop-blur p-6">
+                <p className="font-display text-xs text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <Icon name="Wallet" size={14} /> Баланс клеверов
+                </p>
+                <p className="font-display text-4xl font-bold text-cyan-300 mb-1">
+                  {balance.toLocaleString('ru-RU')}
+                </p>
+                <p className="text-muted-foreground text-sm flex items-center gap-1"><Clover /> клеверов на счету</p>
+                {!profile && (
+                  <div className="mt-4 p-3 rounded-xl bg-fuchsia-500/10 border border-fuchsia-400/20 text-fuchsia-300 text-xs flex items-center gap-2">
+                    <Icon name="Gift" size={14} />
+                    Создай профиль и получи +100 💠 бесплатно!
+                  </div>
+                )}
+                {profile && (
+                  <div className="mt-4 p-3 rounded-xl bg-cyan-500/10 border border-cyan-400/20 text-cyan-300 text-xs flex items-center gap-2">
+                    <Icon name="CheckCircle" size={14} />
+                    Приветственные 100 💠 получены!
+                  </div>
+                )}
+              </div>
+
+              {/* Stats */}
+              {profile && (
+                <div className="rounded-2xl border border-white/5 bg-card/60 backdrop-blur p-6 space-y-3">
+                  <p className="font-display text-xs text-muted-foreground uppercase tracking-wider">Статистика</p>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Куплено товаров</span>
+                    <span className="font-semibold">{ITEMS.length - visible.length + 0}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Статус</span>
+                    <span className="text-amber-300 font-semibold flex items-center gap-1"><Icon name="Star" size={12} />Новичок</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Cart drawer */}
       {cartOpen && (
@@ -270,7 +475,7 @@ function Index() {
 
             <div className="flex-1 overflow-y-auto p-5 space-y-3">
               {cart.length === 0 && (
-                <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground gap-3">
+                <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground gap-3 py-20">
                   <Icon name="PackageOpen" size={48} className="opacity-40" />
                   <p>Корзина пуста. Добавь косметику или титулы!</p>
                 </div>
@@ -313,7 +518,7 @@ function Index() {
                 size="lg"
                 disabled={cart.length === 0}
                 onClick={checkout}
-                className="w-full bg-gradient-to-r from-cyan-400 to-cyan-500 text-background font-display font-semibold hover:opacity-90 glow-cyan disabled:opacity-40"
+                className="w-full bg-gradient-to-r from-cyan-400 to-cyan-500 text-background font-display font-semibold hover:opacity-90 disabled:opacity-40"
               >
                 <Icon name="Check" size={18} /> Купить за клеверы
               </Button>
@@ -327,9 +532,9 @@ function Index() {
         <div className="container flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-md bg-gradient-to-br from-cyan-400 to-fuchsia-500 flex items-center justify-center font-display font-bold text-background text-sm">B</div>
-            <span className="font-display font-semibold">BRAWL SHON</span>
+            <span className="font-display font-semibold text-foreground">BRAWL SHON</span>
           </div>
-          <p>© 2026 Brawl Shon. Валюта проекта — клеверы 💠</p>
+          <p>© 2026 Brawl Shon · Валюта проекта — клеверы 💠</p>
           <div className="flex gap-3">
             <Icon name="MessageCircle" size={18} className="hover:text-cyan-300 cursor-pointer transition-colors" />
             <Icon name="Send" size={18} className="hover:text-cyan-300 cursor-pointer transition-colors" />
@@ -340,5 +545,3 @@ function Index() {
     </div>
   );
 }
-
-export default Index;
