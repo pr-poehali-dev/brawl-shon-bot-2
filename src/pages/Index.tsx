@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 const HERO_IMG = 'https://cdn.poehali.dev/projects/e286d4e4-31d5-488b-95e2-ef4a099f9aba/files/115b72cd-fb1d-498c-aa2e-238bf8e3b2a9.jpg';
 
@@ -43,11 +44,47 @@ const Clover = ({ className = '' }: { className?: string }) => (
   <span className={`inline-flex items-center text-cyan-300 ${className}`}>💠</span>
 );
 
+type CartLine = { item: Item; qty: number };
+
 function Index() {
   const [active, setActive] = useState('home');
   const [filter, setFilter] = useState<'all' | 'Косметика' | 'Титул'>('all');
+  const [balance, setBalance] = useState(2450);
+  const [cart, setCart] = useState<CartLine[]>([]);
+  const [cartOpen, setCartOpen] = useState(false);
+  const { toast } = useToast();
 
   const visible = ITEMS.filter((i) => filter === 'all' || i.type === filter);
+  const cartCount = cart.reduce((s, l) => s + l.qty, 0);
+  const cartTotal = cart.reduce((s, l) => s + l.item.price * l.qty, 0);
+
+  const addToCart = (item: Item) => {
+    setCart((prev) => {
+      const found = prev.find((l) => l.item.name === item.name);
+      if (found) return prev.map((l) => (l.item.name === item.name ? { ...l, qty: l.qty + 1 } : l));
+      return [...prev, { item, qty: 1 }];
+    });
+    setCartOpen(true);
+  };
+
+  const changeQty = (name: string, delta: number) => {
+    setCart((prev) =>
+      prev
+        .map((l) => (l.item.name === name ? { ...l, qty: l.qty + delta } : l))
+        .filter((l) => l.qty > 0)
+    );
+  };
+
+  const checkout = () => {
+    if (cartTotal > balance) {
+      toast({ title: 'Недостаточно клеверов 💠', description: `Не хватает ${cartTotal - balance} 💠. Пополни баланс.`, variant: 'destructive' });
+      return;
+    }
+    setBalance((b) => b - cartTotal);
+    toast({ title: 'Покупка успешна! 🎉', description: `Куплено товаров: ${cartCount}. Списано ${cartTotal} 💠.` });
+    setCart([]);
+    setCartOpen(false);
+  };
 
   return (
     <div className="min-h-screen grid-bg text-foreground font-body overflow-x-hidden">
@@ -82,8 +119,19 @@ function Index() {
 
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary border border-cyan-400/20 font-display font-semibold">
-              <Clover /> <span className="text-cyan-300">2,450</span>
+              <Clover /> <span className="text-cyan-300">{balance.toLocaleString('ru-RU')}</span>
             </div>
+            <button
+              onClick={() => setCartOpen(true)}
+              className="relative w-9 h-9 rounded-full bg-secondary border border-white/10 flex items-center justify-center hover:border-cyan-400/40 transition-colors"
+            >
+              <Icon name="ShoppingCart" size={18} className="text-cyan-300" />
+              {cartCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-fuchsia-500 text-white text-[10px] font-bold flex items-center justify-center animate-scale-in">
+                  {cartCount}
+                </span>
+              )}
+            </button>
             <button className="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-400 to-fuchsia-500 flex items-center justify-center">
               <Icon name="User" size={18} className="text-background" />
             </button>
@@ -192,7 +240,11 @@ function Index() {
                       {item.price} <Clover />
                     </span>
                   </div>
-                  <Button size="sm" className="bg-cyan-400/10 hover:bg-cyan-400 hover:text-background text-cyan-300 border border-cyan-400/30 font-semibold transition-all">
+                  <Button
+                    size="sm"
+                    onClick={() => addToCart(item)}
+                    className="bg-cyan-400/10 hover:bg-cyan-400 hover:text-background text-cyan-300 border border-cyan-400/30 font-semibold transition-all"
+                  >
                     <Icon name="Plus" size={16} />
                   </Button>
                 </div>
@@ -201,6 +253,74 @@ function Index() {
           })}
         </div>
       </section>
+
+      {/* Cart drawer */}
+      {cartOpen && (
+        <div className="fixed inset-0 z-[60] flex justify-end">
+          <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" onClick={() => setCartOpen(false)} />
+          <aside className="relative w-full max-w-md h-full bg-card border-l border-white/10 flex flex-col animate-slide-in-right">
+            <div className="flex items-center justify-between p-5 border-b border-white/5">
+              <h3 className="font-display text-xl font-bold flex items-center gap-2">
+                <Icon name="ShoppingCart" size={20} className="text-cyan-300" /> Корзина
+              </h3>
+              <button onClick={() => setCartOpen(false)} className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center">
+                <Icon name="X" size={18} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5 space-y-3">
+              {cart.length === 0 && (
+                <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground gap-3">
+                  <Icon name="PackageOpen" size={48} className="opacity-40" />
+                  <p>Корзина пуста. Добавь косметику или титулы!</p>
+                </div>
+              )}
+              {cart.map((line) => {
+                const r = RARITY[line.item.rarity];
+                return (
+                  <div key={line.item.name} className="flex items-center gap-3 rounded-xl border border-white/5 bg-secondary/40 p-3">
+                    <div className={`w-12 h-12 shrink-0 rounded-lg bg-gradient-to-br from-secondary to-background flex items-center justify-center border ${r.color}`}>
+                      <Icon name={line.item.icon} size={22} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-display font-semibold text-sm truncate">{line.item.name}</p>
+                      <p className="text-cyan-300 text-sm font-semibold flex items-center gap-1">{line.item.price} <Clover /></p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => changeQty(line.item.name, -1)} className="w-7 h-7 rounded-md bg-secondary border border-white/10 flex items-center justify-center hover:border-cyan-400/40">
+                        <Icon name="Minus" size={14} />
+                      </button>
+                      <span className="w-5 text-center font-semibold">{line.qty}</span>
+                      <button onClick={() => changeQty(line.item.name, 1)} className="w-7 h-7 rounded-md bg-secondary border border-white/10 flex items-center justify-center hover:border-cyan-400/40">
+                        <Icon name="Plus" size={14} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="p-5 border-t border-white/5 space-y-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Твой баланс</span>
+                <span className="font-display font-semibold text-cyan-300 flex items-center gap-1">{balance.toLocaleString('ru-RU')} <Clover /></span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-display font-semibold">Итого</span>
+                <span className="font-display text-xl font-bold text-cyan-300 flex items-center gap-1">{cartTotal.toLocaleString('ru-RU')} <Clover /></span>
+              </div>
+              <Button
+                size="lg"
+                disabled={cart.length === 0}
+                onClick={checkout}
+                className="w-full bg-gradient-to-r from-cyan-400 to-cyan-500 text-background font-display font-semibold hover:opacity-90 glow-cyan disabled:opacity-40"
+              >
+                <Icon name="Check" size={18} /> Купить за клеверы
+              </Button>
+            </div>
+          </aside>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="border-t border-white/5 py-8">
