@@ -85,19 +85,46 @@ function AvatarDisplay({ avatarId, size = 'md' }: { avatarId: string; size?: 'sm
   return <img src={avatar.src} alt={avatar.label} className={`${sz} rounded-full object-cover border-2 border-cyan-400/40 shrink-0`} />;
 }
 
+function load<T>(key: string, fallback: T): T {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+}
+function save<T>(key: string, value: T) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { console.warn(e); }
+}
+
 export default function Index() {
   const [active, setActive] = useState('home');
   const [filter, setFilter] = useState<'all' | 'Косметика' | 'Титул'>('all');
-  const [balance, setBalance] = useState(2450);
+  const [balance, setBalance] = useState<number>(() => load('bs_balance', 2450));
   const [cart, setCart] = useState<CartLine[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
-  const [owned, setOwned] = useState<Item[]>([]);
+  const [owned, setOwned] = useState<Item[]>(() => load('bs_owned', []));
   const [profileTab, setProfileTab] = useState<'edit' | 'collection'>('edit');
-  const [profile, setProfile] = useState<Profile>(null);
+  const [profile, setProfile] = useState<Profile>(() => load('bs_profile', null));
   const [editNick, setEditNick] = useState('');
   const [editAvatar, setEditAvatar] = useState('default');
   const [nickError, setNickError] = useState('');
   const { toast } = useToast();
+
+  // Сохранение в localStorage при каждом изменении
+  const setBalancePersist = (updater: number | ((b: number) => number)) => {
+    setBalance((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      save('bs_balance', next);
+      return next;
+    });
+  };
+  const setOwnedPersist = (updater: Item[] | ((prev: Item[]) => Item[])) => {
+    setOwned((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      save('bs_owned', next);
+      return next;
+    });
+  };
+  const setProfilePersist = (p: Profile) => {
+    setProfile(p);
+    save('bs_profile', p);
+  };
 
   const visible = ITEMS.filter((i) => filter === 'all' || i.type === filter);
   const cartCount = cart.reduce((s, l) => s + l.qty, 0);
@@ -123,8 +150,8 @@ export default function Index() {
       toast({ title: 'Недостаточно клеверов 💠', description: `Не хватает ${cartTotal - balance} 💠. Пополни баланс.`, variant: 'destructive' });
       return;
     }
-    setBalance((b) => b - cartTotal);
-    setOwned((prev) => {
+    setBalancePersist((b) => b - cartTotal);
+    setOwnedPersist((prev) => {
       const newItems = cart.map((l) => l.item).filter((i) => !prev.some((o) => o.name === i.name));
       return [...prev, ...newItems];
     });
@@ -138,8 +165,8 @@ export default function Index() {
     if (nick.length < 3) { setNickError('Минимум 3 символа'); return; }
     if (nick.length > 20) { setNickError('Максимум 20 символов'); return; }
     setNickError('');
-    setProfile({ nick, avatarId: editAvatar });
-    setBalance((b) => b + 100);
+    setProfilePersist({ nick, avatarId: editAvatar });
+    setBalancePersist((b) => b + 100);
     toast({ title: 'Профиль создан! 🎉', description: 'Тебе начислено +100 💠 за регистрацию!' });
   };
 
@@ -148,7 +175,7 @@ export default function Index() {
     if (nick.length < 3) { setNickError('Минимум 3 символа'); return; }
     if (nick.length > 20) { setNickError('Максимум 20 символов'); return; }
     setNickError('');
-    setProfile({ nick, avatarId: editAvatar });
+    setProfilePersist({ nick, avatarId: editAvatar });
     toast({ title: 'Профиль обновлён!' });
   };
 
