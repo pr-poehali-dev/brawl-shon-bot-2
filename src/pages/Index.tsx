@@ -29,6 +29,7 @@ type Item = {
   price: number;
   oldPrice?: number;
   icon: string;
+  emoji?: string;
 };
 
 const RARITY: Record<Item['rarity'], { color: string; glow: string }> = {
@@ -47,6 +48,14 @@ const ITEMS: Item[] = [
   { name: 'Кибер-маска', type: 'Косметика', rarity: 'Редкий', price: 410, oldPrice: 550, icon: 'Bot' },
   { name: 'Ледяной страж', type: 'Косметика', rarity: 'Обычный', price: 150, icon: 'Snowflake' },
   { name: 'Покоритель', type: 'Титул', rarity: 'Редкий', price: 280, icon: 'Trophy' },
+  { name: 'Пламя любви', type: 'Косметика', rarity: 'Обычный', price: 20, icon: 'Sparkles', emoji: '❤️‍🔥' },
+  { name: 'Вихрь', type: 'Косметика', rarity: 'Обычный', price: 20, icon: 'Sparkles', emoji: '🌀' },
+  { name: 'Денежный дождь', type: 'Косметика', rarity: 'Обычный', price: 20, icon: 'Sparkles', emoji: '💸' },
+  { name: 'Оберег', type: 'Косметика', rarity: 'Обычный', price: 20, icon: 'Sparkles', emoji: '🪬' },
+  { name: 'Искра', type: 'Косметика', rarity: 'Обычный', price: 20, icon: 'Sparkles', emoji: '💡' },
+  { name: 'Фонарь', type: 'Косметика', rarity: 'Обычный', price: 20, icon: 'Sparkles', emoji: '🏮' },
+  { name: 'Дракон', type: 'Косметика', rarity: 'Обычный', price: 20, icon: 'Sparkles', emoji: '🐲' },
+  { name: 'Цветение', type: 'Косметика', rarity: 'Обычный', price: 20, icon: 'Sparkles', emoji: '🌸' },
 ];
 
 const Clover = ({ className = '' }: { className?: string }) => (
@@ -301,7 +310,10 @@ export default function Index() {
 
                     <div className="flex items-center justify-center h-28 mb-4">
                       <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br from-secondary to-background flex items-center justify-center border ${r.color} transition-transform group-hover:scale-110`}>
-                        <Icon name={item.icon} size={36} className="opacity-90" />
+                        {item.emoji
+                          ? <span className="text-4xl leading-none">{item.emoji}</span>
+                          : <Icon name={item.icon} size={36} className="opacity-90" />
+                        }
                       </div>
                     </div>
 
@@ -485,7 +497,10 @@ export default function Index() {
                 return (
                   <div key={line.item.name} className="flex items-center gap-3 rounded-xl border border-white/5 bg-secondary/40 p-3">
                     <div className={`w-12 h-12 shrink-0 rounded-lg bg-gradient-to-br from-secondary to-background flex items-center justify-center border ${r.color}`}>
-                      <Icon name={line.item.icon} size={22} />
+                      {line.item.emoji
+                        ? <span className="text-2xl leading-none">{line.item.emoji}</span>
+                        : <Icon name={line.item.icon} size={22} />
+                      }
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-display font-semibold text-sm truncate">{line.item.name}</p>
