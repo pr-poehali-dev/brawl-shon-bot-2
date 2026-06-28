@@ -203,7 +203,7 @@ export default function Index() {
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-400 to-fuchsia-500 flex items-center justify-center font-display font-bold text-background text-lg">B</div>
             <span className="font-display text-xl font-bold tracking-wide">
-              BRAWL <span className="text-gradient">SHON</span>
+              BRAWL <span className="text-gradient">SHOP</span>
             </span>
           </div>
 
@@ -655,9 +655,9 @@ export default function Index() {
         <div className="container flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-md bg-gradient-to-br from-cyan-400 to-fuchsia-500 flex items-center justify-center font-display font-bold text-background text-sm">B</div>
-            <span className="font-display font-semibold text-foreground">BRAWL SHON</span>
+            <span className="font-display font-semibold text-foreground">BRAWL SHOP</span>
           </div>
-          <p>© 2026 Brawl Shon · Валюта проекта — клеверы 💠</p>
+          <p>© 2026 Brawl Shop · Валюта проекта — клеверы 💠</p>
           <div className="flex gap-3">
             <Icon name="MessageCircle" size={18} className="hover:text-cyan-300 cursor-pointer transition-colors" />
             <Icon name="Send" size={18} className="hover:text-cyan-300 cursor-pointer transition-colors" />
