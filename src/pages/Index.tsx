@@ -56,6 +56,12 @@ const ITEMS: Item[] = [
   { name: 'Фонарь', type: 'Косметика', rarity: 'Обычный', price: 20, icon: 'Sparkles', emoji: '🏮' },
   { name: 'Дракон', type: 'Косметика', rarity: 'Обычный', price: 20, icon: 'Sparkles', emoji: '🐲' },
   { name: 'Цветение', type: 'Косметика', rarity: 'Обычный', price: 20, icon: 'Sparkles', emoji: '🌸' },
+  { name: 'Бум!Бум!Бум!', type: 'Титул', rarity: 'Эпический', price: 700, icon: 'Zap' },
+  { name: 'Первая кровь', type: 'Титул', rarity: 'Эпический', price: 700, icon: 'Swords' },
+  { name: 'Ха-Ха', type: 'Титул', rarity: 'Эпический', price: 700, icon: 'Laugh' },
+  { name: 'Боль', type: 'Титул', rarity: 'Эпический', price: 700, icon: 'Skull' },
+  { name: 'Панды', type: 'Титул', rarity: 'Легендарный', price: 3500, icon: 'Star', emoji: '🐼' },
+  { name: 'Пельмень', type: 'Титул', rarity: 'Легендарный', price: 3500, icon: 'Star', emoji: '🥟' },
 ];
 
 const Clover = ({ className = '' }: { className?: string }) => (
